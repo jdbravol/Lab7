@@ -54,7 +54,9 @@ public class Client extends Application{
     
     GridPane paneForUserLogin = new GridPane();
     GridPane paneForChatSelect = new GridPane();
+    GridPane paneForChatView = new GridPane();
     Stage theStage;
+    TextArea chatText;
     
     /**
      * This inner class is helpful for bundling together
@@ -192,8 +194,42 @@ public class Client extends Application{
     /**
      * This function sets the chat screen view
      */
-    private void chatScreenView(){
-    	
+    private void chatScreenView(Stage primaryStage){
+    	// 0.0 : Set UI attributes
+    	paneForChatView = new GridPane();
+		paneForChatView.setAlignment(Pos.CENTER);
+		paneForChatView.setHgap(10);
+		paneForChatView.setVgap(10);
+		paneForChatView.setPadding(new Insets(25,25,25,25));	
+		
+		// 0.1: make lines visible
+		paneForChatView.setGridLinesVisible(true);
+		
+		// 1:0 Add Text Area
+		chatText = new TextArea();
+		chatText.setEditable(false);
+		paneForChatView.add(chatText, 1, 1);
+		
+		// 2.0: Add input field
+        TextField input = new TextField();
+        input.setOnAction(event -> {
+        	try {
+        		String msgToSend = input.getText();
+				dataSender.writeObject(msgToSend);
+				input.clear();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}// send message to server
+        });
+        paneForChatView.add(input, 1, 2);
+        
+       
+        // Create a scene and place it in the stage
+        Scene scene = new Scene(paneForChatView, 500, 500);
+        primaryStage.setTitle("Chat Select"); // Set the stage title
+        primaryStage.setScene(scene); // Place the scene in the stage
+        primaryStage.show(); // Display the stage
     }
 
     /**
@@ -227,9 +263,14 @@ public class Client extends Application{
 			// 3.2: Add button handler
 			
 			joinCommunalButton.setOnAction(e->{
-				// signal the serve that you joined communal chat
+				try {
+					dataSender.writeObject("joinedCommunal");
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 				
-				// set chat screen
+				chatScreenView(primaryStage);
 			});
 		
 
@@ -287,7 +328,14 @@ public class Client extends Application{
                 	
                 	// check for chat select related input
                 	
-                	
+                	// check for incoming chat message
+                	if(data.toString().startsWith("chatMsg:")){
+                		String chatMsg = data.toString().replaceFirst("chatMsg:", "");
+                		Platform.runLater(() -> {
+                			chatText.appendText(chatMsg + "\n");
+                		}); 
+                		
+                	}
                 	
                 }
             } 

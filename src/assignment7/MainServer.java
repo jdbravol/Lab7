@@ -30,12 +30,14 @@ public class MainServer extends Application {
 
     private TextArea ta = new TextArea();
     private HashMap<String, String> logInDataBase = new HashMap<String, String>();
-    private ArrayList<String> usersAvailableToChat = new ArrayList<String>(0);
+    private HashSet<String> usersAvailableToChat = new HashSet<String>(0);
     private ArrayList<Chat> chats = new ArrayList<Chat>(0);
     private HashSet<String> usersLoggedIn = new HashSet<String>(0);
     
     private HashSet<String> usersInCommunal = new HashSet<String>(0);
-    private HashMap<String,Socket> userSockets = new HashMap<String,Socket>(0);
+    private HashMap<String,Socket> usersToSockets = new HashMap<String,Socket>(0);
+    private HashMap<String,ObjectOutputStream> usersToOutputs = new HashMap<String,ObjectOutputStream>(0);
+    private HashMap<Socket,String> socketsToUsers = new HashMap<Socket,String>(0);
 
     // Number a client
     private int clientNo = 0;
@@ -124,8 +126,34 @@ public class MainServer extends Application {
                 	Serializable data = (Serializable) inputFromClient.readObject();
                 	
                 	// check login stuff
-                	if(loginCheck(data, outputToClient)){
+                	if(loginCheck(data, outputToClient, socket)){
                 		continue;
+                	}
+                	
+                	// check for indivial chat DESPUESSSS
+                	
+                	// check for communal
+                	if(data.toString().equals("joinedCommunal")){
+                		usersInCommunal.add(socketsToUsers.get(socket));			// meter esta personal al comunal
+                		usersAvailableToChat.remove(socketsToUsers.get(socket));	// sacarlo de available to chat
+                		continue;
+                	}
+                	
+                	// if left communal
+                	
+                	// if left individual
+                	
+                	// if log out
+                	
+                	if(data instanceof String){
+                		// check if communal or individual
+                		String nameOfUser = socketsToUsers.get(socket);
+                		if(usersInCommunal.contains(nameOfUser)){
+                			// send the message to everyone
+                			String message = data.toString();
+                			sendToCommunal(message, nameOfUser);
+                		}
+                		
                 	}
 
                 }
@@ -135,7 +163,31 @@ public class MainServer extends Application {
         }
     }
     
-    private boolean loginCheck(Serializable data, ObjectOutputStream outputToClient){
+    /**
+     * sends inputs message to all people in communal
+     */
+    private void sendToCommunal(String message, String nameOfUser){
+    	for(String userInComm : usersInCommunal){
+    		try {
+				ObjectOutputStream commSender = usersToOutputs.get(userInComm);
+				commSender.writeObject("chatMsg:" + nameOfUser + ": " + message);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+    	}
+    }
+    
+    
+    
+    /**
+     * Checks status of login
+     * @param data
+     * @param outputToClient
+     * @param socket
+     * @return
+     */
+    private boolean loginCheck(Serializable data, ObjectOutputStream outputToClient, Socket socket){
     	try{
 	    	// deal with Log in attempt
 	        if(data instanceof Client.LoginInfo){
@@ -155,6 +207,13 @@ public class MainServer extends Application {
 	        	else{
 	        		outputToClient.writeObject("good log");
 	        		usersLoggedIn.add(tryLogin.username);
+	        		
+	        		usersAvailableToChat.add(tryLogin.username);	// signal this user is now available to chat
+	        		usersToSockets.put(tryLogin.username, socket);
+	        		socketsToUsers.put(socket, tryLogin.username);
+	        		usersToOutputs.put(tryLogin.username, outputToClient);
+	        		
+	        		
 	        	}
 	        	return true;
 	        }
