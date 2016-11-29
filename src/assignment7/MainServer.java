@@ -13,17 +13,46 @@ import javafx.stage.Stage;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+
+import assignment7.Client.LoginInfo;
 
 public class MainServer extends Application {
 
     private TextArea ta = new TextArea();
+    private HashMap<String, String> logInDataBase = new HashMap<String, String>();
+    private ArrayList<String> usersAvailableToChat = new ArrayList<String>(0);
+    private ArrayList<Chat> chats = new ArrayList<Chat>(0);
+    private HashSet<String> usersLoggedIn = new HashSet<String>(0);
+    
+    private HashSet<String> usersInCommunal = new HashSet<String>(0);
+    private HashMap<String,Socket> userSockets = new HashMap<String,Socket>(0);
 
     // Number a client
     private int clientNo = 0;
+    
+    /**
+     * This inner class is for chats
+     */
+    private static class Chat{
+    	ArrayList<String> usersInThisChat;
+    	
+    	Chat(){
+    		this.usersInThisChat = new ArrayList<String>(0);
+    	}
+    	Chat(ArrayList<String> usersInThisChat){
+    		this.usersInThisChat = usersInThisChat;
+    	}
+    }
 
     @Override // Override the start method in the Application class
     public void start(Stage primaryStage) {
@@ -87,27 +116,68 @@ public class MainServer extends Application {
         public void run() {
             try {
                 // Create data input and output streams
-                DataInputStream inputFromClient = new DataInputStream( socket.getInputStream());
-                DataOutputStream outputToClient = new DataOutputStream( socket.getOutputStream());
+            	ObjectOutputStream outputToClient = new ObjectOutputStream( socket.getOutputStream());
+                ObjectInputStream inputFromClient = new ObjectInputStream( socket.getInputStream());
                 // Continuously serve the client
                 while (true) {
-                    // Receive radius from the client
-                    double radius = inputFromClient.readDouble();
+                	// get data
+                	Serializable data = (Serializable) inputFromClient.readObject();
+                	
+                	// check login stuff
+                	if(loginCheck(data, outputToClient)){
+                		continue;
+                	}
 
-                    // Compute area
-                    double area = radius * radius * Math.PI;
-                    // Send area back to the client
-                    outputToClient.writeDouble(area);
-                    Platform.runLater(() -> {
-                        ta.appendText("radius received from client: " +
-                                radius + '\n');
-                        ta.appendText("Area found: " + area + '\n');
-                    });
                 }
-            } catch(IOException e) {
+            } catch(Exception e) {
                 e.printStackTrace();
             }
         }
+    }
+    
+    private boolean loginCheck(Serializable data, ObjectOutputStream outputToClient){
+    	try{
+	    	// deal with Log in attempt
+	        if(data instanceof Client.LoginInfo){
+	        	Client.LoginInfo tryLogin = (Client.LoginInfo) data;
+	        	// check if user name exists
+	        	if(!logInDataBase.containsKey(((Client.LoginInfo)data).username)){
+	        		outputToClient.writeObject("invalid user");
+	        	}
+	        	// check if password is correct
+	        	else if(!logInDataBase.get(((Client.LoginInfo) data).username).equals(((Client.LoginInfo)data).password)){
+	        		outputToClient.writeObject("wrong password");
+	        	}
+	        	else if(usersLoggedIn.contains(tryLogin.username)){
+	        		outputToClient.writeObject("already");
+	        	}
+	        	// signal successfull login
+	        	else{
+	        		outputToClient.writeObject("good log");
+	        		usersLoggedIn.add(tryLogin.username);
+	        	}
+	        	return true;
+	        }
+	        
+	        // deal with new user
+	        if(data instanceof Client.NewUserInfo){
+	        	Client.NewUserInfo newUserInfo = (Client.NewUserInfo)data;
+	        	if(!logInDataBase.containsKey(newUserInfo.username)){
+		        	logInDataBase.put(newUserInfo.username, newUserInfo.password);
+		        	outputToClient.writeObject("good user");
+		        	return true;
+	        	}
+	        	else{
+	        		outputToClient.writeObject("user already");
+		        	return true;
+	        	}
+	        }
+	        return false;
+    	}
+    	catch(Exception e){
+    		e.printStackTrace();
+    	}
+		return false;
     }
 
     public static void main(String[] args) throws Exception {
