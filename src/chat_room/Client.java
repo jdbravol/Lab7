@@ -1,6 +1,15 @@
 package chat_room;
 
 import javafx.application.Application;
+import javafx.geometry.*;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
 import javax.swing.*;
@@ -17,45 +26,77 @@ import java.net.Socket;
  * Created by juanbravo on 11/28/16.
  */
 
-public class Client{
-    private JTextArea incoming;
-    private JTextField outgoing;
+public class Client extends Application{
+    private TextArea incoming;
+    private TextField outgoing;
     private BufferedReader reader;
     private PrintWriter writer;
 
+    private void initView(){
+        //Initial Login page
 
-    public void run() throws Exception {
-        initView();
-        setUpNetworking();
-    }
 
-    private void initView() {
-        // general frame
-        JFrame frame = new JFrame("Messenger");
-        JPanel mainPanel = new JPanel();
+        Stage loginStage = new Stage();
+        GridPane mainPanel = new GridPane();
+        Scene loginScene;
+        //Username & Password input
+        Label userName = new Label("User Name: ");
+        TextField user = new TextField();
+        Label pass = new Label("Password: ");
+        PasswordField password = new PasswordField();
+        mainPanel.add(userName, 0, 0);
+        mainPanel.add(user, 0, 1);
+        mainPanel.add(pass, 1, 0);
+        mainPanel.add(password, 1, 1);
 
-        // Incoming text TextArea
-        incoming = new JTextArea(15, 40);
-        incoming.setLineWrap(true);
-        incoming.setWrapStyleWord(true);
-        incoming.setEditable(false); // cant be edited
-        JScrollPane qScroller = new JScrollPane(incoming);
-        qScroller.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 
-        // Outgoing text field
-        outgoing = new JTextField(50);
+        //buttons
+        Button newUser = new Button("Create User");
+        Button forgotPass = new Button("forgot Password");
+        Button login = new Button("Login");
+        mainPanel.add(newUser, 2, 0);
+        mainPanel.add(login, 2, 1);
+        mainPanel.add(forgotPass, 3, 0);
 
-        // Buttons
-        JButton sendButton = new JButton("Send");
-        sendButton.addActionListener(new SendButtonListener()); //action of the button
+        //set Handlers
+        login.setOnAction(e ->{
+            //TODO
+            try {
+
+            }
+            catch (Exception ex){
+
+            }
+        });
+
+        newUser.setOnAction(e ->{
+            //TODO
+            try {
+
+            }
+            catch (Exception ex){
+
+            }
+        });
+
+        forgotPass.setOnAction(e ->{
+            //TODO
+            try {
+
+            }
+            catch (Exception ex){
+
+            }
+        });
+
 
         // Putting everything together
-        mainPanel.add(qScroller);
-        mainPanel.add(outgoing);
-        mainPanel.add(sendButton);
-        frame.getContentPane().add(BorderLayout.CENTER, mainPanel);
-        frame.setSize(500, 350);
-        frame.setVisible(true);
+        loginStage.setTitle("Welcome to Messenger");
+
+    }
+
+    private void MessengerView() {
+
 
     }
 
@@ -73,6 +114,13 @@ public class Client{
         readerThread.start();
     }
 
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        initView();
+        setUpNetworking();
+        MessengerView();
+    }
+
     class SendButtonListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
             writer.println(outgoing.getText());
@@ -83,11 +131,7 @@ public class Client{
     }
 
     public static void main(String[] args) {
-        try {
-            new Client().run();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        launch(args);
     }
 
     class IncomingReader implements Runnable {
@@ -96,11 +140,22 @@ public class Client{
             try {
                 while ((message = reader.readLine()) != null) {
 
-                    incoming.append(message + "\n");
+                    //incoming.append(message + "\n");
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
+        }
+    }
+
+    private class loginButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            writer.println(outgoing.getText());
+            writer.flush();
+            outgoing.setText("");
+            outgoing.requestFocus();
+            //TODO: 11/29/16
         }
     }
 }
