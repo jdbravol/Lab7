@@ -18,7 +18,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
 
-public class Server extends Application {
+public class MainServer extends Application {
 
     private TextArea ta = new TextArea();
 
@@ -33,7 +33,7 @@ public class Server extends Application {
         primaryStage.setScene(scene); // Place the scene in the stage
         primaryStage.show(); // Display the stage
 
-        new Thread( () -> {
+        Thread serverThread = new Thread( () -> {
             try {  // Create a server socket
                 ServerSocket serverSocket = new ServerSocket(4242);
                 ta.appendText("MultiThreadServer started at "
@@ -61,13 +61,18 @@ public class Server extends Application {
 
 
                     // Create and start a new thread for the connection
-                    new Thread(new HandleAClient(socket)).start();
+                    Thread clientThread = new Thread(new HandleAClient(socket));
+                    clientThread.setDaemon(true);
+                    clientThread.start();
                 }
             }
             catch(IOException ex) {
                 System.err.println(ex);
             }
-        }).start();
+        });
+        
+        serverThread.setDaemon(true);
+        serverThread.start();
     }
 
 
@@ -105,7 +110,9 @@ public class Server extends Application {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         launch(args);
+        
+        Socket testSocket = new Socket("127.0.0.1", 4242);
     }
 }
